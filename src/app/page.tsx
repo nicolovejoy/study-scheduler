@@ -19,6 +19,7 @@ export default function Dashboard() {
   }, []);
 
   function handleDelete(id: string) {
+    if (!window.confirm("Delete this assignment? This cannot be undone.")) return;
     deleteAssignment(id);
     setAssignments((prev) => prev.filter((a) => a.id !== id));
   }
