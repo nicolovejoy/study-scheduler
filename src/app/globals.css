@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-big-calendar/lib/css/react-big-calendar.css";
 
 :root {
   --background: #ffffff;
@@ -23,4 +24,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* react-big-calendar overrides */
+.rbc-calendar {
+  min-height: 600px;
+}
+.rbc-event.study-block {
+  background-color: #3b82f6;
+}
+.rbc-event.busy-block {
+  background-color: #6b7280;
 }
