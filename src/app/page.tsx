@@ -26,6 +26,12 @@ export default function Dashboard() {
 
   return (
     <div>
+      <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+        <strong className="text-zinc-900 dark:text-zinc-100">Study Scheduler</strong> helps
+        you estimate how long assignments will take and auto-schedules study blocks into your
+        week. Time estimates are powered by Anthropic&apos;s Claude. This is an early prototype
+        &mdash; all data is stored locally in your browser.
+      </div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Assignments</h1>
         <div className="flex gap-3">

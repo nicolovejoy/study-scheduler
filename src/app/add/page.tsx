@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addAssignment } from "@/lib/storage";
+import DatePicker from "@/components/DatePicker";
 
 export default function AddAssignment() {
   const router = useRouter();
@@ -14,6 +15,10 @@ export default function AddAssignment() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!dueDate) {
+      setError("Please select a due date.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -76,13 +81,7 @@ export default function AddAssignment() {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Due Date</label>
-          <input
-            type="date"
-            required
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+          <DatePicker value={dueDate} onChange={setDueDate} />
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <button
