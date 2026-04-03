@@ -12,7 +12,8 @@ Build: `npx next build`
 Dev server: `npm run dev`
 Lint: `npm run lint`
 
-No test framework is set up yet.
+Test: `npm test` (vitest)
+Test watch: `npm run test:watch`
 
 ## Architecture
 
@@ -31,10 +32,9 @@ No test framework is set up yet.
 
 ## Next steps
 
-- Onboard Max: share 1Password vault, he clones and does PR for issue #1 (delete confirmation)
-- Add test framework (vitest) and tests for scheduler logic
-- Improve UI: loading states, mobile responsiveness, empty state polish
+- Improve mobile responsiveness and loading states
 - Add feedback loop: report actual time after completing an assignment
+- Expand test coverage beyond scheduler (e.g., storage utils, component tests)
 
 ## Out of scope (planned for later)
 
