@@ -29,6 +29,13 @@ No test framework is set up yet.
 - The `AvailabilityGrid` type is `Record<string, boolean>` keyed by `"dayname-hour"` (e.g., `"monday-14"`)
 - The `ANTHROPIC_API_KEY` env var must be set for the AI estimation route to work
 
+## Next steps
+
+- Onboard Max: share 1Password vault, he clones and does PR for issue #1 (delete confirmation)
+- Add test framework (vitest) and tests for scheduler logic
+- Improve UI: loading states, mobile responsiveness, empty state polish
+- Add feedback loop: report actual time after completing an assignment
+
 ## Out of scope (planned for later)
 
-File upload/PDF parsing, Google Calendar sync, user accounts, database, resource recommendations, feedback loop (actual vs estimated time), preferences (strengths/weaknesses)
+File upload/PDF parsing, Google Calendar sync, user accounts, database, resource recommendations, preferences (strengths/weaknesses)
