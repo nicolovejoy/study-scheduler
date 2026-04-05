@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
-import { Assignment, AvailabilityGrid, ScheduleBlock } from "./types";
+import { Assignment, Availability, Day, ScheduleBlock } from "./types";
 
-const DAYS = [
+const DAYS: Day[] = [
   "sunday",
   "monday",
   "tuesday",
@@ -13,12 +13,12 @@ const DAYS = [
 
 /**
  * Greedy scheduler: sorts assignments by due date, fills earliest available
- * slots until estimated time is covered. Won't schedule past due date.
+ * 30-minute slots until estimated time is covered. Won't schedule past due date.
  * Returns schedule blocks + list of at-risk assignment IDs.
  */
 export function generateSchedule(
   assignments: Assignment[],
-  availability: AvailabilityGrid,
+  availability: Availability,
   weekStart: Date
 ): { blocks: ScheduleBlock[]; atRisk: string[] } {
   const sorted = [...assignments].sort(
@@ -28,21 +28,33 @@ export function generateSchedule(
   const blocks: ScheduleBlock[] = [];
   const atRisk: string[] = [];
 
-  // Build list of available 1-hour slots for the week, sorted chronologically
+  // Build list of available 30-minute slots for the week, sorted chronologically
   const slots: { start: dayjs.Dayjs; end: dayjs.Dayjs }[] = [];
+
   for (let d = 0; d < 7; d++) {
     const day = dayjs(weekStart).add(d, "day");
     const dayName = DAYS[day.day()];
-    for (let h = 7; h < 23; h++) {
-      const key = `${dayName}-${h}`;
-      if (availability[key]) {
-        slots.push({
-          start: day.hour(h).minute(0).second(0),
-          end: day.hour(h + 1).minute(0).second(0),
-        });
+    const dayBlocks = availability.filter((b) => b.day === dayName);
+
+    for (const block of dayBlocks) {
+      const [startH, startM] = block.start.split(":").map(Number);
+      const [endH, endM] = block.end.split(":").map(Number);
+      let cursor = day.hour(startH).minute(startM).second(0);
+      const blockEnd = day.hour(endH).minute(endM).second(0);
+
+      while (
+        cursor.add(30, "minute").isBefore(blockEnd) ||
+        cursor.add(30, "minute").isSame(blockEnd)
+      ) {
+        slots.push({ start: cursor, end: cursor.add(30, "minute") });
+        cursor = cursor.add(30, "minute");
       }
     }
   }
+
+  // Sort slots chronologically (blocks within a day are already ordered,
+  // but multiple days need merging in order)
+  slots.sort((a, b) => a.start.valueOf() - b.start.valueOf());
 
   const usedSlots = new Set<number>();
 
@@ -55,7 +67,7 @@ export function generateSchedule(
       if (slots[i].start.isAfter(dueDate)) break;
 
       usedSlots.add(i);
-      remainingMinutes -= 60;
+      remainingMinutes -= 30;
 
       blocks.push({
         id: `${assignment.id}-${i}`,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateSchedule } from "./scheduler";
-import { Assignment, AvailabilityGrid } from "./types";
+import { Assignment, Availability } from "./types";
 
 function makeAssignment(
   overrides: Partial<Assignment> & { id: string; title: string }
@@ -18,16 +18,25 @@ function makeAssignment(
 // Monday April 6, 2026
 const WEEK_START = new Date(2026, 3, 6);
 
+// Helper: create a single availability block with a throwaway id
+function block(
+  day: Availability[number]["day"],
+  start: string,
+  end: string
+): Availability[number] {
+  return { id: `${day}-${start}`, day, start, end };
+}
+
 describe("generateSchedule", () => {
   it("returns empty blocks when no assignments", () => {
-    const result = generateSchedule([], {}, WEEK_START);
+    const result = generateSchedule([], [], WEEK_START);
     expect(result.blocks).toEqual([]);
     expect(result.atRisk).toEqual([]);
   });
 
   it("returns empty blocks when no availability", () => {
     const assignments = [makeAssignment({ id: "1", title: "Ochem" })];
-    const result = generateSchedule(assignments, {}, WEEK_START);
+    const result = generateSchedule(assignments, [], WEEK_START);
     expect(result.blocks).toEqual([]);
     expect(result.atRisk).toEqual(["1"]);
   });
@@ -36,13 +45,10 @@ describe("generateSchedule", () => {
     const assignments = [
       makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
     ];
-    const availability: AvailabilityGrid = {
-      "monday-9": true,
-      "monday-10": true,
-      "monday-11": true,
-    };
+    // 9:00–11:00 = 4 × 30-min slots = 120 min
+    const availability: Availability = [block("monday", "09:00", "11:00")];
     const result = generateSchedule(assignments, availability, WEEK_START);
-    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks).toHaveLength(4);
     expect(result.atRisk).toEqual([]);
     expect(result.blocks[0].title).toBe("Ochem");
   });
@@ -51,12 +57,10 @@ describe("generateSchedule", () => {
     const assignments = [
       makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 180 }),
     ];
-    const availability: AvailabilityGrid = {
-      "monday-9": true,
-      "monday-10": true,
-    };
+    // 9:00–11:00 = 120 min, not enough for 180
+    const availability: Availability = [block("monday", "09:00", "11:00")];
     const result = generateSchedule(assignments, availability, WEEK_START);
-    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks).toHaveLength(4);
     expect(result.atRisk).toEqual(["1"]);
   });
 
@@ -75,13 +79,11 @@ describe("generateSchedule", () => {
         estimatedMinutes: 60,
       }),
     ];
-    const availability: AvailabilityGrid = {
-      "monday-9": true,
-      "monday-10": true,
-    };
+    // 9:00–11:00 = 4 × 30 min = 120 min (enough for both)
+    const availability: Availability = [block("monday", "09:00", "11:00")];
     const result = generateSchedule(assignments, availability, WEEK_START);
     expect(result.blocks[0].title).toBe("Ochem");
-    expect(result.blocks[1].title).toBe("Bio");
+    expect(result.blocks[2].title).toBe("Bio");
   });
 
   it("does not schedule past the due date", () => {
@@ -93,37 +95,26 @@ describe("generateSchedule", () => {
         estimatedMinutes: 180,
       }),
     ];
-    const availability: AvailabilityGrid = {
-      "monday-9": true,
-      "monday-10": true,
-      "tuesday-9": true, // past due date
-    };
+    // Monday 9:00–11:00 = 4 slots (120 min), Tuesday (past due) ignored
+    const availability: Availability = [
+      block("monday", "09:00", "11:00"),
+      block("tuesday", "09:00", "10:00"),
+    ];
     const result = generateSchedule(assignments, availability, WEEK_START);
-    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks).toHaveLength(4);
     expect(result.atRisk).toEqual(["1"]);
   });
 
   it("does not double-book slots across assignments", () => {
     const assignments = [
-      makeAssignment({
-        id: "1",
-        title: "Ochem",
-        estimatedMinutes: 60,
-      }),
-      makeAssignment({
-        id: "2",
-        title: "Bio",
-        estimatedMinutes: 60,
-      }),
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+      makeAssignment({ id: "2", title: "Bio", estimatedMinutes: 60 }),
     ];
-    const availability: AvailabilityGrid = {
-      "monday-9": true,
-      "monday-10": true,
-    };
+    // 9:00–11:00 = 4 × 30-min slots, enough for both 60-min assignments
+    const availability: Availability = [block("monday", "09:00", "11:00")];
     const result = generateSchedule(assignments, availability, WEEK_START);
-    expect(result.blocks).toHaveLength(2);
-    // Each assignment gets a different slot
+    expect(result.blocks).toHaveLength(4);
     const starts = result.blocks.map((b) => b.start.getTime());
-    expect(new Set(starts).size).toBe(2);
+    expect(new Set(starts).size).toBe(4);
   });
 });
