@@ -25,6 +25,10 @@ Test watch: `npm run test:watch`
 - **Storage:** Firestore with user-scoped subcollections (`users/{uid}/assignments`, `users/{uid}/availability`) via `src/lib/storage.ts`
 - **Calendar:** `react-big-calendar` with `dayjs` localizer on the `/schedule` page. Study blocks are blue, busy blocks are gray
 
+## Infrastructure as Code
+
+We manage infrastructure configuration (Firestore rules, etc.) as checked-in files rather than clicking through web consoles. This means settings live in the repo (e.g., `firestore.rules`, `firebase.json`), are reviewed in PRs like any other code change, and are deployed via CLI commands. If a new service needs configuration, define it in a file and deploy it from the terminal — don't configure it manually in a dashboard.
+
 ## Key conventions
 
 - Client components use `"use client"` directive — all pages are client-rendered except the API route
