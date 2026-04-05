@@ -34,7 +34,7 @@ export default function Dashboard() {
       </div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Assignments</h1>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
           <Link
             href="/add"
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
