@@ -2,43 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Availability, AvailabilityBlock, Day } from "@/lib/types";
+import { DAYS_FROM_MONDAY, DAY_LABELS } from "@/lib/types";
 import { getAvailability, saveAvailability } from "@/lib/storage";
 import { useAuth } from "@/lib/auth";
-
-const DAYS: Day[] = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
-
-const DAY_LABELS: Record<Day, string> = {
-  monday: "Monday",
-  tuesday: "Tuesday",
-  wednesday: "Wednesday",
-  thursday: "Thursday",
-  friday: "Friday",
-  saturday: "Saturday",
-  sunday: "Sunday",
-};
-
-function formatTime(t: string): string {
-  const [h, m] = t.split(":").map(Number);
-  const suffix = h < 12 ? "am" : "pm";
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return `${hour}:${m.toString().padStart(2, "0")}${suffix}`;
-}
-
-function toMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
+import { formatTime, toMinutes, sortAvailabilityBlocks } from "@/lib/time";
 
 const emptyPerDay = () =>
-  Object.fromEntries(DAYS.map((d) => [d, ""])) as Record<Day, string>;
+  Object.fromEntries(DAYS_FROM_MONDAY.map((d) => [d, ""])) as Record<Day, string>;
 
 export default function AvailabilityPage() {
   const { user } = useAuth();
@@ -48,11 +18,16 @@ export default function AvailabilityPage() {
   const [addErrors, setAddErrors] = useState<Record<Day, string>>(emptyPerDay());
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
-    setBlocks(await getAvailability(user.uid));
+    try {
+      setBlocks(await getAvailability(user.uid));
+    } catch {
+      setLoadError("Could not load availability. Please try refreshing.");
+    }
   }, [user]);
 
   useEffect(() => {
@@ -62,7 +37,11 @@ export default function AvailabilityPage() {
   async function persistBlocks(updated: Availability) {
     if (!user) return;
     setBlocks(updated);
-    await saveAvailability(user.uid, updated);
+    try {
+      await saveAvailability(user.uid, updated);
+    } catch {
+      setLoadError("Could not save changes. Please try again.");
+    }
   }
 
   function addBlock(day: Day) {
@@ -88,10 +67,7 @@ export default function AvailabilityPage() {
       start,
       end,
     };
-    const updated = [...blocks, newBlock].sort((a, b) => {
-      if (a.day !== b.day) return DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
-      return toMinutes(a.start) - toMinutes(b.start);
-    });
+    const updated = sortAvailabilityBlocks([...blocks, newBlock], DAYS_FROM_MONDAY);
 
     persistBlocks(updated);
     setNewStart((prev) => ({ ...prev, [day]: "" }));
@@ -125,10 +101,7 @@ export default function AvailabilityPage() {
         const withIds: Availability = (
           imported as Omit<AvailabilityBlock, "id">[]
         ).map((b) => ({ ...b, id: crypto.randomUUID() }));
-        const merged = [...blocks, ...withIds].sort((a, b) => {
-          if (a.day !== b.day) return DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
-          return toMinutes(a.start) - toMinutes(b.start);
-        });
+        const merged = sortAvailabilityBlocks([...blocks, ...withIds], DAYS_FROM_MONDAY);
         await persistBlocks(merged);
       } catch {
         setImportError("Could not parse schedule. Please try again.");
@@ -176,8 +149,12 @@ export default function AvailabilityPage() {
         </div>
       </div>
 
+      {loadError && (
+        <p className="mb-4 text-sm text-red-500">{loadError}</p>
+      )}
+
       <div className="space-y-6">
-        {DAYS.map((day) => {
+        {DAYS_FROM_MONDAY.map((day) => {
           const dayBlocks = blocks.filter((b) => b.day === day);
           return (
             <div key={day}>

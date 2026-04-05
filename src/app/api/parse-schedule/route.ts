@@ -20,12 +20,17 @@ const schema = z.object({
   ),
 });
 
-export async function POST(req: Request) {
-  const { fileData, fileMimeType } = await req.json();
+const requestSchema = z.object({
+  fileData: z.string(),
+  fileMimeType: z.string(),
+});
 
-  if (!fileData || !fileMimeType) {
+export async function POST(req: Request) {
+  const parsed = requestSchema.safeParse(await req.json());
+  if (!parsed.success) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
+  const { fileData, fileMimeType } = parsed.data;
 
   const { output } = await generateText({
     model: anthropic("claude-sonnet-4-6"),

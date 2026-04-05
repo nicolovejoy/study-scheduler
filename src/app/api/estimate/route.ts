@@ -12,8 +12,19 @@ const schema = z.object({
     .describe("Brief explanation of the estimate"),
 });
 
+const requestSchema = z.object({
+  description: z.string().optional(),
+  fileData: z.string().optional(),
+  fileName: z.string().optional(),
+  fileMimeType: z.string().optional(),
+});
+
 export async function POST(req: Request) {
-  const { description, fileData, fileName, fileMimeType } = await req.json();
+  const parsed = requestSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+  const { description, fileData, fileName, fileMimeType } = parsed.data;
 
   const content: Array<TextPart | ImagePart | FilePart> = [];
 

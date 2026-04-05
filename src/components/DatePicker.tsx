@@ -10,12 +10,7 @@ interface DatePickerProps {
 export default function DatePicker({ value, onChange }: DatePickerProps) {
   const today = dayjs();
   const startOfWeek = today.startOf("week"); // Sunday
-  const days: dayjs.Dayjs[] = [];
-
-  // Show this week + next week (14 days starting from Sunday)
-  for (let i = 0; i < 14; i++) {
-    days.push(startOfWeek.add(i, "day"));
-  }
+  const days = Array.from({ length: 14 }, (_, i) => startOfWeek.add(i, "day"));
 
   const weeks = [days.slice(0, 7), days.slice(7, 14)];
   const weekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

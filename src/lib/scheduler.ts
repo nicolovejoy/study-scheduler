@@ -1,15 +1,6 @@
 import dayjs from "dayjs";
-import { Assignment, Availability, Day, ScheduleBlock } from "./types";
-
-const DAYS: Day[] = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
+import { Assignment, Availability, DAYS_FROM_SUNDAY, ScheduleBlock } from "./types";
+import { parseTime } from "./time";
 
 /**
  * Greedy scheduler: sorts assignments by due date, fills earliest available
@@ -35,12 +26,12 @@ export function generateSchedule(
 
   for (let d = 0; d < 7; d++) {
     const day = dayjs(weekStart).add(d, "day");
-    const dayName = DAYS[day.day()];
+    const dayName = DAYS_FROM_SUNDAY[day.day()];
     const dayBlocks = availability.filter((b) => b.day === dayName);
 
     for (const block of dayBlocks) {
-      const [startH, startM] = block.start.split(":").map(Number);
-      const [endH, endM] = block.end.split(":").map(Number);
+      const [startH, startM] = parseTime(block.start);
+      const [endH, endM] = parseTime(block.end);
       let cursor = day.hour(startH).minute(startM).second(0);
       const blockEnd = day.hour(endH).minute(endM).second(0);
 

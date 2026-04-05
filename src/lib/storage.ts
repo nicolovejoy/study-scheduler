@@ -45,13 +45,10 @@ export async function getAvailability(uid: string): Promise<Availability> {
 export async function saveAvailability(uid: string, blocks: Availability) {
   // Delete existing blocks, then write new ones
   const snap = await getDocs(userCol(uid, "availability"));
-  const deletes = snap.docs.map((d) =>
-    deleteDoc(doc(getDb(), "users", uid, "availability", d.id))
+  await Promise.all(
+    snap.docs.map((d) => deleteDoc(doc(getDb(), "users", uid, "availability", d.id)))
   );
-  await Promise.all(deletes);
-
-  const writes = blocks.map((b) =>
-    setDoc(doc(getDb(), "users", uid, "availability", b.id), b)
+  await Promise.all(
+    blocks.map((b) => setDoc(doc(getDb(), "users", uid, "availability", b.id), b))
   );
-  await Promise.all(writes);
 }

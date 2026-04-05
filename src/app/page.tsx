@@ -10,16 +10,21 @@ import { useAuth } from "@/lib/auth";
 export default function Dashboard() {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!user) return;
-    const data = await getAssignments(user.uid);
-    setAssignments(
-      data.sort(
-        (a, b) =>
-          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      )
-    );
+    try {
+      const data = await getAssignments(user.uid);
+      setAssignments(
+        data.sort(
+          (a, b) =>
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        )
+      );
+    } catch {
+      setError("Could not load assignments. Please try refreshing.");
+    }
   }, [user]);
 
   useEffect(() => {
@@ -29,8 +34,12 @@ export default function Dashboard() {
   async function handleDelete(id: string) {
     if (!user) return;
     if (!window.confirm("Delete this assignment? This cannot be undone.")) return;
-    await deleteAssignment(user.uid, id);
-    setAssignments((prev) => prev.filter((a) => a.id !== id));
+    try {
+      await deleteAssignment(user.uid, id);
+      setAssignments((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      setError("Could not delete assignment. Please try again.");
+    }
   }
 
   return (
@@ -58,6 +67,10 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-500">{error}</p>
+      )}
 
       {assignments.length === 0 ? (
         <p className="text-zinc-500">
