@@ -19,7 +19,8 @@ const DAYS: Day[] = [
 export function generateSchedule(
   assignments: Assignment[],
   availability: Availability,
-  weekStart: Date
+  weekStart: Date,
+  now: Date = new Date()
 ): { blocks: ScheduleBlock[]; atRisk: string[] } {
   const sorted = [...assignments].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
@@ -30,6 +31,7 @@ export function generateSchedule(
 
   // Build list of available 30-minute slots for the week, sorted chronologically
   const slots: { start: dayjs.Dayjs; end: dayjs.Dayjs }[] = [];
+  const nowDayjs = dayjs(now);
 
   for (let d = 0; d < 7; d++) {
     const day = dayjs(weekStart).add(d, "day");
@@ -46,7 +48,10 @@ export function generateSchedule(
         cursor.add(30, "minute").isBefore(blockEnd) ||
         cursor.add(30, "minute").isSame(blockEnd)
       ) {
-        slots.push({ start: cursor, end: cursor.add(30, "minute") });
+        // Skip slots that have already passed
+        if (cursor.isAfter(nowDayjs) || cursor.isSame(nowDayjs)) {
+          slots.push({ start: cursor, end: cursor.add(30, "minute") });
+        }
         cursor = cursor.add(30, "minute");
       }
     }
