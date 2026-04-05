@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+## Developer context
+
+The developer is new to software engineering. Always explain decisions clearly and avoid jargon without explanation.
+
+Never commit directly to `main`. Always create a feature branch and open a PR.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
@@ -29,12 +35,6 @@ Test watch: `npm run test:watch`
 - Client components use `"use client"` directive — all pages are client-rendered except the API route
 - The `AvailabilityGrid` type is `Record<string, boolean>` keyed by `"dayname-hour"` (e.g., `"monday-14"`)
 - The `ANTHROPIC_API_KEY` env var must be set for the AI estimation route to work
-
-## Next steps
-
-- Improve mobile responsiveness and loading states
-- Add feedback loop: report actual time after completing an assignment
-- Expand test coverage beyond scheduler (e.g., storage utils, component tests)
 
 ## Out of scope (planned for later)
 
