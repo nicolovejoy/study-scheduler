@@ -18,11 +18,16 @@ export default function AvailabilityPage() {
   const [addErrors, setAddErrors] = useState<Record<Day, string>>(emptyPerDay());
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
-    setBlocks(await getAvailability(user.uid));
+    try {
+      setBlocks(await getAvailability(user.uid));
+    } catch {
+      setLoadError("Could not load availability. Please try refreshing.");
+    }
   }, [user]);
 
   useEffect(() => {
@@ -32,7 +37,11 @@ export default function AvailabilityPage() {
   async function persistBlocks(updated: Availability) {
     if (!user) return;
     setBlocks(updated);
-    await saveAvailability(user.uid, updated);
+    try {
+      await saveAvailability(user.uid, updated);
+    } catch {
+      setLoadError("Could not save changes. Please try again.");
+    }
   }
 
   function addBlock(day: Day) {
@@ -139,6 +148,10 @@ export default function AvailabilityPage() {
           )}
         </div>
       </div>
+
+      {loadError && (
+        <p className="mb-4 text-sm text-red-500">{loadError}</p>
+      )}
 
       <div className="space-y-6">
         {DAYS_FROM_MONDAY.map((day) => {

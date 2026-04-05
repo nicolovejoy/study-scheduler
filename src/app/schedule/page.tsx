@@ -15,17 +15,22 @@ export default function SchedulePage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([]);
   const [atRisk, setAtRisk] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!user) return;
-    const a = await getAssignments(user.uid);
-    setAssignments(a);
+    try {
+      const a = await getAssignments(user.uid);
+      setAssignments(a);
 
-    const availability = await getAvailability(user.uid);
-    const now = dayjs().startOf("week");
-    const result = generateSchedule(a, availability, now.toDate());
-    setBlocks(result.blocks);
-    setAtRisk(result.atRisk);
+      const availability = await getAvailability(user.uid);
+      const now = dayjs().startOf("week");
+      const result = generateSchedule(a, availability, now.toDate());
+      setBlocks(result.blocks);
+      setAtRisk(result.atRisk);
+    } catch {
+      setError("Could not load schedule. Please try refreshing.");
+    }
   }, [user]);
 
   useEffect(() => {
@@ -51,6 +56,10 @@ export default function SchedulePage() {
       <p className="mb-4 text-sm text-zinc-500">
         Study blocks auto-scheduled based on your assignments and availability.
       </p>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-500">{error}</p>
+      )}
 
       {atRiskAssignments.length > 0 && (
         <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950">
