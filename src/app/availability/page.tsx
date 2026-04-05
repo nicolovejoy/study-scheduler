@@ -30,14 +30,6 @@ export default function Availability() {
     setGrid(getAvailability());
   }, []);
 
-  function toggle(key: string) {
-    setGrid((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      saveAvailability(next);
-      return next;
-    });
-  }
-
   function handleMouseDown(key: string) {
     setIsDragging(true);
     const newValue = !grid[key];
@@ -105,9 +97,6 @@ export default function Availability() {
                     key={key}
                     onMouseDown={() => handleMouseDown(key)}
                     onMouseEnter={() => handleMouseEnter(key)}
-                    onClick={() => {
-                      if (!isDragging) toggle(key);
-                    }}
                     className={`h-8 cursor-pointer rounded-sm border transition-colors ${
                       grid[key]
                         ? "border-blue-400 bg-blue-500"
