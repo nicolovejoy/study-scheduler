@@ -18,24 +18,23 @@ Test watch: `npm run test:watch`
 ## Architecture
 
 - **Next.js 16 App Router** with TypeScript and Tailwind CSS
-- **4 pages:** `/` (dashboard), `/add` (assignment form), `/availability` (weekly grid), `/schedule` (calendar view)
-- **AI estimation:** `/api/estimate` route uses Vercel AI SDK (`generateText` + `Output.object()`) with `@ai-sdk/anthropic` (claude-sonnet-4-6) to estimate assignment duration from pasted text
-- **Scheduling:** `src/lib/scheduler.ts` — greedy algorithm sorts assignments by due date and fills earliest available 1-hour slots. Flags assignments as "at risk" when not enough time before due date
+- **4 pages:** `/` (dashboard), `/add` (assignment form + file upload), `/availability` (day-by-day time blocks), `/schedule` (calendar view)
+- **AI estimation:** `/api/estimate` route uses Vercel AI SDK (`generateText` + `Output.object()`) with `@ai-sdk/anthropic` (claude-sonnet-4-6) to estimate assignment duration from pasted text or uploaded files (PDF/image/txt via multimodal messages)
+- **AI calendar import:** `/api/parse-schedule` route accepts a Google Calendar screenshot, extracts busy blocks via Claude, and returns free study windows
+- **Scheduling:** `src/lib/scheduler.ts` — greedy algorithm sorts assignments by due date and fills earliest available 30-minute slots within free blocks. Flags assignments as "at risk" when not enough time before due date
 - **Storage:** All state (assignments, availability grid) lives in localStorage via `src/lib/storage.ts`. No database, no auth
 - **Calendar:** `react-big-calendar` with `dayjs` localizer on the `/schedule` page. Study blocks are blue, busy blocks are gray
 
 ## Key conventions
 
 - Client components use `"use client"` directive — all pages are client-rendered except the API route
-- The `AvailabilityGrid` type is `Record<string, boolean>` keyed by `"dayname-hour"` (e.g., `"monday-14"`)
+- Availability is stored as `AvailabilityBlock[]` (`{ id, day, start, end }`) — explicit time windows per day, not an hourly grid
 - The `ANTHROPIC_API_KEY` env var must be set for the AI estimation route to work
 
 ## Next steps
 
 - Add feedback loop: report actual time after completing an assignment
 - Expand test coverage beyond scheduler (e.g., storage utils, component tests)
-- Fix availability grid UX polish (drag behavior edge cases)
-
 ## Out of scope (planned for later)
 
-File upload/PDF parsing, Google Calendar sync, user accounts, database, resource recommendations, preferences (strengths/weaknesses)
+Google Calendar sync (live API), user accounts, database, resource recommendations, preferences (strengths/weaknesses)
