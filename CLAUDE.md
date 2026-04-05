@@ -32,9 +32,9 @@ Test watch: `npm run test:watch`
 
 ## Next steps
 
-- Improve mobile responsiveness and loading states
 - Add feedback loop: report actual time after completing an assignment
 - Expand test coverage beyond scheduler (e.g., storage utils, component tests)
+- Fix availability grid UX polish (drag behavior edge cases)
 
 ## Out of scope (planned for later)
 
