@@ -17,4 +17,20 @@ export interface ScheduleBlock {
   type: "study" | "busy";
 }
 
-export type AvailabilityGrid = Record<string, boolean>; // "day-hour" -> available
+export type Day =
+  | "sunday"
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday";
+
+export interface AvailabilityBlock {
+  id: string;
+  day: Day;
+  start: string; // "09:00" — 24h HH:MM
+  end: string;   // "11:30" — 24h HH:MM
+}
+
+export type Availability = AvailabilityBlock[];

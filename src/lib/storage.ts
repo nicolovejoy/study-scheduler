@@ -1,4 +1,4 @@
-import { Assignment, AvailabilityGrid } from "./types";
+import { Assignment, Availability } from "./types";
 
 const ASSIGNMENTS_KEY = "study-scheduler-assignments";
 const AVAILABILITY_KEY = "study-scheduler-availability";
@@ -24,12 +24,21 @@ export function deleteAssignment(id: string) {
   saveAssignments(assignments);
 }
 
-export function getAvailability(): AvailabilityGrid {
-  if (typeof window === "undefined") return {};
-  const raw = localStorage.getItem(AVAILABILITY_KEY);
-  return raw ? JSON.parse(raw) : {};
+export function getAvailability(): Availability {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(AVAILABILITY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Guard against old grid format (object, not array)
+    if (!Array.isArray(parsed)) return [];
+    return parsed as Availability;
+  } catch {
+    return [];
+  }
 }
 
-export function saveAvailability(grid: AvailabilityGrid) {
-  localStorage.setItem(AVAILABILITY_KEY, JSON.stringify(grid));
+export function saveAvailability(blocks: Availability): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(AVAILABILITY_KEY, JSON.stringify(blocks));
 }
