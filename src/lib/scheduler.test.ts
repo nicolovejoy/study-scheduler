@@ -117,4 +117,154 @@ describe("generateSchedule", () => {
     const starts = result.blocks.map((b) => b.start.getTime());
     expect(new Set(starts).size).toBe(4);
   });
+
+  it("handles zero estimated minutes without creating blocks", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Easy quiz", estimatedMinutes: 0 }),
+    ];
+    const availability: Availability = [block("monday", "09:00", "11:00")];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(0);
+    expect(result.atRisk).toEqual([]);
+  });
+
+  it("spreads blocks across multiple days", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Essay", estimatedMinutes: 120 }),
+    ];
+    // 1 hour Monday + 1 hour Tuesday = 4 slots total
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("tuesday", "09:00", "10:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(4);
+    expect(result.atRisk).toEqual([]);
+
+    const monBlocks = result.blocks.filter(
+      (b) => b.start.getDay() === 1 // Monday
+    );
+    const tueBlocks = result.blocks.filter(
+      (b) => b.start.getDay() === 2 // Tuesday
+    );
+    expect(monBlocks).toHaveLength(2);
+    expect(tueBlocks).toHaveLength(2);
+  });
+
+  it("handles equal due dates by preserving input order", () => {
+    const assignments = [
+      makeAssignment({
+        id: "a",
+        title: "Ochem",
+        dueDate: "2026-04-10",
+        estimatedMinutes: 30,
+      }),
+      makeAssignment({
+        id: "b",
+        title: "Bio",
+        dueDate: "2026-04-10",
+        estimatedMinutes: 30,
+      }),
+    ];
+    const availability: Availability = [block("monday", "09:00", "10:00")];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks[0].title).toBe("Ochem");
+    expect(result.blocks[1].title).toBe("Bio");
+  });
+
+  it("handles multiple availability blocks on the same day", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
+    ];
+    // Morning 9–10 + afternoon 14–15 = 4 slots
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("monday", "14:00", "15:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(4);
+    expect(result.atRisk).toEqual([]);
+    // First two in morning, last two in afternoon
+    expect(result.blocks[0].start.getHours()).toBe(9);
+    expect(result.blocks[2].start.getHours()).toBe(14);
+  });
+
+  it("ignores availability blocks shorter than 30 minutes", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 30 }),
+    ];
+    // 9:00–9:20 is less than one 30-min slot
+    const availability: Availability = [block("monday", "09:00", "09:20")];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(0);
+    expect(result.atRisk).toEqual(["1"]);
+  });
+
+  it("marks all at-risk when all assignments exceed availability", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
+      makeAssignment({ id: "2", title: "Bio", estimatedMinutes: 120 }),
+    ];
+    // Only 1 hour total = 2 slots = 60 min
+    const availability: Availability = [block("monday", "09:00", "10:00")];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(2);
+    // Both should be at risk — first gets 60 of 120, second gets 0 of 120
+    expect(result.atRisk).toContain("1");
+    expect(result.atRisk).toContain("2");
+  });
+
+  it("skips slots in the past", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
+    ];
+    // Monday 9:00–11:00 = 4 slots, but now is 10:00 Monday
+    const availability: Availability = [block("monday", "09:00", "11:00")];
+    const now = new Date(2026, 3, 6, 10, 0); // Monday April 6 at 10:00
+    const result = generateSchedule(assignments, availability, WEEK_START, now);
+    // Only 10:00 and 10:30 slots remain (9:00 and 9:30 are in the past)
+    expect(result.blocks).toHaveLength(2);
+    expect(result.blocks[0].start.getHours()).toBe(10);
+    expect(result.blocks[1].start.getHours()).toBe(10);
+    expect(result.blocks[1].start.getMinutes()).toBe(30);
+  });
+
+  it("flags at-risk when past slots reduce availability below estimate", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
+    ];
+    // Only 2 slots available but 2 are in the past → only 60 min for 120 min assignment
+    const availability: Availability = [block("monday", "09:00", "11:00")];
+    const now = new Date(2026, 3, 6, 10, 0);
+    const result = generateSchedule(assignments, availability, WEEK_START, now);
+    expect(result.atRisk).toEqual(["1"]);
+  });
+
+  it("does not filter slots on future days", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+    ];
+    // Now is Monday 10:00 — Tuesday 9:00 should still be available
+    const availability: Availability = [block("tuesday", "09:00", "10:00")];
+    const now = new Date(2026, 3, 6, 10, 0);
+    const result = generateSchedule(assignments, availability, WEEK_START, now);
+    expect(result.blocks).toHaveLength(2);
+    expect(result.atRisk).toEqual([]);
+  });
+
+  it("generates correct 30-min slot boundaries", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 90 }),
+    ];
+    const availability: Availability = [block("monday", "09:00", "10:30")];
+    const result = generateSchedule(assignments, availability, WEEK_START);
+    expect(result.blocks).toHaveLength(3);
+    expect(result.blocks[0].start.getMinutes()).toBe(0);
+    expect(result.blocks[0].end.getMinutes()).toBe(30);
+    expect(result.blocks[1].start.getMinutes()).toBe(30);
+    expect(result.blocks[1].end.getMinutes()).toBe(0);
+    expect(result.blocks[2].start.getMinutes()).toBe(0);
+    expect(result.blocks[2].end.getMinutes()).toBe(30);
+  });
 });
