@@ -34,3 +34,33 @@ export interface AvailabilityBlock {
 }
 
 export type Availability = AvailabilityBlock[];
+
+export const DAYS_FROM_SUNDAY: Day[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+export const DAYS_FROM_MONDAY: Day[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+export const DAY_LABELS: Record<Day, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
