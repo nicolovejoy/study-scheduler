@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Availability, AvailabilityBlock, Day } from "@/lib/types";
 import { getAvailability, saveAvailability } from "@/lib/storage";
+import { useAuth } from "@/lib/auth";
 
 const DAYS: Day[] = [
   "monday",
@@ -39,7 +40,8 @@ function toMinutes(t: string): number {
 const emptyPerDay = () =>
   Object.fromEntries(DAYS.map((d) => [d, ""])) as Record<Day, string>;
 
-export default function Availability() {
+export default function AvailabilityPage() {
+  const { user } = useAuth();
   const [blocks, setBlocks] = useState<Availability>([]);
   const [newStart, setNewStart] = useState<Record<Day, string>>(emptyPerDay());
   const [newEnd, setNewEnd] = useState<Record<Day, string>>(emptyPerDay());
@@ -48,9 +50,20 @@ export default function Availability() {
   const [importError, setImportError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const load = useCallback(async () => {
+    if (!user) return;
+    setBlocks(await getAvailability(user.uid));
+  }, [user]);
+
   useEffect(() => {
-    setBlocks(getAvailability());
-  }, []);
+    load();
+  }, [load]);
+
+  async function persistBlocks(updated: Availability) {
+    if (!user) return;
+    setBlocks(updated);
+    await saveAvailability(user.uid, updated);
+  }
 
   function addBlock(day: Day) {
     const start = newStart[day];
@@ -80,8 +93,7 @@ export default function Availability() {
       return toMinutes(a.start) - toMinutes(b.start);
     });
 
-    setBlocks(updated);
-    saveAvailability(updated);
+    persistBlocks(updated);
     setNewStart((prev) => ({ ...prev, [day]: "" }));
     setNewEnd((prev) => ({ ...prev, [day]: "" }));
     setAddErrors((prev) => ({ ...prev, [day]: "" }));
@@ -89,8 +101,7 @@ export default function Availability() {
 
   function deleteBlock(id: string) {
     const updated = blocks.filter((b) => b.id !== id);
-    setBlocks(updated);
-    saveAvailability(updated);
+    persistBlocks(updated);
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -118,8 +129,7 @@ export default function Availability() {
           if (a.day !== b.day) return DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
           return toMinutes(a.start) - toMinutes(b.start);
         });
-        setBlocks(merged);
-        saveAvailability(merged);
+        await persistBlocks(merged);
       } catch {
         setImportError("Could not parse schedule. Please try again.");
       } finally {
@@ -158,7 +168,7 @@ export default function Availability() {
               importing ? "pointer-events-none opacity-50" : ""
             }`}
           >
-            {importing ? "Importing…" : "Import from Google Calendar"}
+            {importing ? "Importing\u2026" : "Import from Google Calendar"}
           </label>
           {importError && (
             <p className="text-xs text-red-500">{importError}</p>

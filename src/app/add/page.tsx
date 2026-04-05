@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addAssignment } from "@/lib/storage";
+import { useAuth } from "@/lib/auth";
 import DatePicker from "@/components/DatePicker";
 
 const ALLOWED_TYPES = new Set([
@@ -18,6 +19,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 
 export default function AddAssignment() {
   const router = useRouter();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -80,6 +82,7 @@ export default function AddAssignment() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
 
     if (!description.trim() && !fileData) {
       setError("Please add a description or upload a file.");
@@ -105,7 +108,7 @@ export default function AddAssignment() {
 
       const { estimatedMinutes, reasoning } = await res.json();
 
-      addAssignment({
+      await addAssignment(user.uid, {
         id: crypto.randomUUID(),
         title,
         description: description.trim() || fileName || "Uploaded file",

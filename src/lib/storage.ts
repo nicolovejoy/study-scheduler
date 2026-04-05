@@ -1,44 +1,57 @@
-import { Assignment, Availability } from "./types";
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "./firebase";
+import { Assignment, Availability, AvailabilityBlock } from "./types";
 
-const ASSIGNMENTS_KEY = "study-scheduler-assignments";
-const AVAILABILITY_KEY = "study-scheduler-availability";
-
-export function getAssignments(): Assignment[] {
-  if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem(ASSIGNMENTS_KEY);
-  return raw ? JSON.parse(raw) : [];
+function getDb() {
+  if (!db) throw new Error("Firestore not initialized");
+  return db;
 }
 
-export function saveAssignments(assignments: Assignment[]) {
-  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
+function userCol(uid: string, col_name: string) {
+  return collection(getDb(), "users", uid, col_name);
 }
 
-export function addAssignment(assignment: Assignment) {
-  const assignments = getAssignments();
-  assignments.push(assignment);
-  saveAssignments(assignments);
+// --- Assignments ---
+
+export async function getAssignments(uid: string): Promise<Assignment[]> {
+  const q = query(userCol(uid, "assignments"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment);
 }
 
-export function deleteAssignment(id: string) {
-  const assignments = getAssignments().filter((a) => a.id !== id);
-  saveAssignments(assignments);
+export async function addAssignment(uid: string, assignment: Assignment) {
+  await setDoc(doc(getDb(), "users", uid, "assignments", assignment.id), assignment);
 }
 
-export function getAvailability(): Availability {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(AVAILABILITY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    // Guard against old grid format (object, not array)
-    if (!Array.isArray(parsed)) return [];
-    return parsed as Availability;
-  } catch {
-    return [];
-  }
+export async function deleteAssignment(uid: string, id: string) {
+  await deleteDoc(doc(getDb(), "users", uid, "assignments", id));
 }
 
-export function saveAvailability(blocks: Availability): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(AVAILABILITY_KEY, JSON.stringify(blocks));
+// --- Availability ---
+
+export async function getAvailability(uid: string): Promise<Availability> {
+  const snap = await getDocs(userCol(uid, "availability"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AvailabilityBlock);
+}
+
+export async function saveAvailability(uid: string, blocks: Availability) {
+  // Delete existing blocks, then write new ones
+  const snap = await getDocs(userCol(uid, "availability"));
+  const deletes = snap.docs.map((d) =>
+    deleteDoc(doc(getDb(), "users", uid, "availability", d.id))
+  );
+  await Promise.all(deletes);
+
+  const writes = blocks.map((b) =>
+    setDoc(doc(getDb(), "users", uid, "availability", b.id), b)
+  );
+  await Promise.all(writes);
 }
