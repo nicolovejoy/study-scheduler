@@ -1,29 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, dayjsLocalizer } from "react-big-calendar";
 import dayjs from "dayjs";
 import { getAssignments, getAvailability } from "@/lib/storage";
 import { generateSchedule } from "@/lib/scheduler";
+import { useAuth } from "@/lib/auth";
 import { Assignment, ScheduleBlock } from "@/lib/types";
 
 const localizer = dayjsLocalizer(dayjs);
 
 export default function SchedulePage() {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([]);
   const [atRisk, setAtRisk] = useState<string[]>([]);
 
-  useEffect(() => {
-    const a = getAssignments();
+  const load = useCallback(async () => {
+    if (!user) return;
+    const a = await getAssignments(user.uid);
     setAssignments(a);
 
-    const availability = getAvailability();
+    const availability = await getAvailability(user.uid);
     const now = dayjs().startOf("week");
     const result = generateSchedule(a, availability, now.toDate());
     setBlocks(result.blocks);
     setAtRisk(result.atRisk);
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const events = useMemo(
     () =>

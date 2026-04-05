@@ -1,26 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";
 import { Assignment } from "@/lib/types";
 import { getAssignments, deleteAssignment } from "@/lib/storage";
+import { useAuth } from "@/lib/auth";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    if (!user) return;
+    const data = await getAssignments(user.uid);
     setAssignments(
-      getAssignments().sort(
+      data.sort(
         (a, b) =>
           new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
       )
     );
-  }, []);
+  }, [user]);
 
-  function handleDelete(id: string) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleDelete(id: string) {
+    if (!user) return;
     if (!window.confirm("Delete this assignment? This cannot be undone.")) return;
-    deleteAssignment(id);
+    await deleteAssignment(user.uid, id);
     setAssignments((prev) => prev.filter((a) => a.id !== id));
   }
 
@@ -29,8 +38,8 @@ export default function Dashboard() {
       <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
         <strong className="text-zinc-900 dark:text-zinc-100">Study Scheduler</strong> helps
         you estimate how long assignments will take and auto-schedules study blocks into your
-        week. Time estimates are powered by Anthropic&apos;s Claude. This is an early prototype
-        &mdash; all data is stored locally in your browser.
+        week. Time estimates are powered by Anthropic&apos;s Claude. Your data is saved to your
+        account and syncs across devices.
       </div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Assignments</h1>

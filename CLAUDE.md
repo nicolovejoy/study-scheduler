@@ -21,7 +21,8 @@ Test watch: `npm run test:watch`
 - **4 pages:** `/` (dashboard), `/add` (assignment form), `/availability` (weekly grid), `/schedule` (calendar view)
 - **AI estimation:** `/api/estimate` route uses Vercel AI SDK (`generateText` + `Output.object()`) with `@ai-sdk/anthropic` (claude-sonnet-4-6) to estimate assignment duration from pasted text
 - **Scheduling:** `src/lib/scheduler.ts` — greedy algorithm sorts assignments by due date and fills earliest available 1-hour slots. Flags assignments as "at risk" when not enough time before due date
-- **Storage:** All state (assignments, availability grid) lives in localStorage via `src/lib/storage.ts`. No database, no auth
+- **Auth:** Firebase Auth with Google Sign-in (`src/lib/auth.tsx`). `AuthGate` component blocks unauthenticated access
+- **Storage:** Firestore with user-scoped subcollections (`users/{uid}/assignments`, `users/{uid}/availability`) via `src/lib/storage.ts`
 - **Calendar:** `react-big-calendar` with `dayjs` localizer on the `/schedule` page. Study blocks are blue, busy blocks are gray
 
 ## Key conventions
@@ -29,6 +30,7 @@ Test watch: `npm run test:watch`
 - Client components use `"use client"` directive — all pages are client-rendered except the API route
 - The `AvailabilityGrid` type is `Record<string, boolean>` keyed by `"dayname-hour"` (e.g., `"monday-14"`)
 - The `ANTHROPIC_API_KEY` env var must be set for the AI estimation route to work
+- Six `NEXT_PUBLIC_FIREBASE_*` env vars configure Firebase (set in Vercel, pulled locally with `vercel env pull`)
 
 ## Next steps
 
@@ -38,4 +40,4 @@ Test watch: `npm run test:watch`
 
 ## Out of scope (planned for later)
 
-File upload/PDF parsing, Google Calendar sync, user accounts, database, resource recommendations, preferences (strengths/weaknesses)
+Google Calendar sync (live API), sharing/groups, resource recommendations, preferences (strengths/weaknesses)
