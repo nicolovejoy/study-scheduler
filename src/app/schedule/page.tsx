@@ -23,16 +23,27 @@ export default function SchedulePage() {
     return generateSchedule(assignments, availability, weekStart.toDate(), new Date(), preference);
   }, [assignments, availability, preference]);
 
+  const assignmentMap = useMemo(
+    () => Object.fromEntries(assignments.map((a) => [a.id, a])),
+    [assignments]
+  );
+
   const events = useMemo(
     () =>
       blocks.map((b) => ({
         title: b.title,
         start: new Date(b.start),
         end: new Date(b.end),
-        resource: b,
+        resource: { ...b, url: assignmentMap[b.assignmentId]?.url },
       })),
-    [blocks]
+    [blocks, assignmentMap]
   );
+
+  function handleSelectEvent(event: { resource: { url?: string } }) {
+    if (event.resource.url) {
+      window.open(event.resource.url, "_blank", "noopener,noreferrer");
+    }
+  }
 
   const error = assignErr || availErr;
   const atRiskAssignments = assignments.filter((a) => atRisk.includes(a.id));
@@ -69,9 +80,11 @@ export default function SchedulePage() {
           min={new Date(2024, 0, 1, 7, 0)}
           max={new Date(2024, 0, 1, 23, 0)}
           style={{ height: 700 }}
+          onSelectEvent={handleSelectEvent}
           eventPropGetter={(event) => ({
             className:
               event.resource.type === "study" ? "study-block" : "busy-block",
+            style: event.resource.url ? { cursor: "pointer" } : undefined,
           })}
         />
       )}
