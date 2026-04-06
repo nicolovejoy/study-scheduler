@@ -39,8 +39,9 @@ We manage infrastructure configuration (Firestore rules, etc.) as checked-in fil
 
 ## Next steps
 
-- Add feedback loop: report actual time after completing an assignment
-- Expand test coverage beyond scheduler (e.g., storage utils, component tests)
+- Add assignment URL field and link from calendar blocks (#8, assigned to Max)
+- Add feedback loop: report actual time after completing an assignment (#5, assigned to Max)
+- Adopt shadcn/ui component library for accessible, composable UI
 - Add overlap detection for availability blocks on the same day
 
 ## Out of scope (planned for later)
