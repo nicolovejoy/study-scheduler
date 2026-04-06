@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { mutateAddAssignment } from "@/lib/hooks";
+import { mutateAddAssignment, useAssignments } from "@/lib/hooks";
 import DatePicker from "@/components/DatePicker";
 
 const ALLOWED_TYPES = new Set([
@@ -20,6 +20,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
 export default function AddAssignment() {
   const router = useRouter();
   const { user } = useAuth();
+  const { assignments } = useAssignments(user?.uid);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -101,7 +102,19 @@ export default function AddAssignment() {
       const res = await fetch("/api/estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description, fileData, fileName, fileMimeType }),
+        body: JSON.stringify({
+          description,
+          fileData,
+          fileName,
+          fileMimeType,
+          history: assignments
+            .filter((a) => a.actualMinutes != null)
+            .map((a) => ({
+              title: a.title,
+              estimatedMinutes: a.estimatedMinutes,
+              actualMinutes: a.actualMinutes!,
+            })),
+        }),
       });
 
       if (!res.ok) throw new Error("Estimation failed");
