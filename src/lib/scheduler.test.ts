@@ -267,4 +267,85 @@ describe("generateSchedule", () => {
     expect(result.blocks[2].start.getMinutes()).toBe(0);
     expect(result.blocks[2].end.getMinutes()).toBe(30);
   });
+
+  it("prioritizes morning slots when preference is morning", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+    ];
+    // Morning 9–10 and evening 18–19 both available
+    const availability: Availability = [
+      block("monday", "18:00", "19:00"),
+      block("monday", "09:00", "10:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START, new Date(0), "morning");
+    expect(result.blocks).toHaveLength(2);
+    // Should pick morning slots first
+    expect(result.blocks[0].start.getHours()).toBe(9);
+    expect(result.blocks[1].start.getHours()).toBe(9);
+  });
+
+  it("prioritizes evening slots when preference is evening", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+    ];
+    // Morning 9–10 and evening 18–19 both available
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("monday", "18:00", "19:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START, new Date(0), "evening");
+    expect(result.blocks).toHaveLength(2);
+    // Should pick evening slots first
+    expect(result.blocks[0].start.getHours()).toBe(18);
+    expect(result.blocks[1].start.getHours()).toBe(18);
+  });
+
+  it("falls back to non-preferred slots when preferred are full", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 120 }),
+    ];
+    // Only 1 hour in afternoon, 1 hour in morning
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("monday", "14:00", "15:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START, new Date(0), "afternoon");
+    expect(result.blocks).toHaveLength(4);
+    expect(result.atRisk).toEqual([]);
+    // Afternoon slots first, then morning
+    expect(result.blocks[0].start.getHours()).toBe(14);
+    expect(result.blocks[1].start.getHours()).toBe(14);
+    expect(result.blocks[2].start.getHours()).toBe(9);
+    expect(result.blocks[3].start.getHours()).toBe(9);
+  });
+
+  it("preserves day order with preference (does not pull later days forward)", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+    ];
+    // Tuesday evening and Monday morning
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("tuesday", "18:00", "19:00"),
+    ];
+    const result = generateSchedule(assignments, availability, WEEK_START, new Date(0), "evening");
+    expect(result.blocks).toHaveLength(2);
+    // Should still use Monday first (day order preserved), even though preference is evening
+    expect(result.blocks[0].start.getDay()).toBe(1); // Monday
+  });
+
+  it("preference none behaves like no preference", () => {
+    const assignments = [
+      makeAssignment({ id: "1", title: "Ochem", estimatedMinutes: 60 }),
+    ];
+    const availability: Availability = [
+      block("monday", "09:00", "10:00"),
+      block("monday", "18:00", "19:00"),
+    ];
+    const withNone = generateSchedule(assignments, availability, WEEK_START, new Date(0), "none");
+    const withoutPref = generateSchedule(assignments, availability, WEEK_START, new Date(0));
+    expect(withNone.blocks.map((b) => b.start.getTime())).toEqual(
+      withoutPref.blocks.map((b) => b.start.getTime())
+    );
+  });
 });

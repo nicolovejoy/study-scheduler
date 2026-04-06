@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Availability, AvailabilityBlock, Day } from "@/lib/types";
-import { DAYS_FROM_MONDAY, DAY_LABELS } from "@/lib/types";
-import { getAvailability, saveAvailability } from "@/lib/storage";
+import type { Availability, AvailabilityBlock, Day, StudyTimePreference } from "@/lib/types";
+import { DAYS_FROM_MONDAY, DAY_LABELS, STUDY_TIME_RANGES } from "@/lib/types";
+import { getAvailability, saveAvailability, getStudyTimePreference, saveStudyTimePreference } from "@/lib/storage";
 import { useAuth } from "@/lib/auth";
 import { formatTime, toMinutes, sortAvailabilityBlocks } from "@/lib/time";
 
@@ -13,6 +13,7 @@ const emptyPerDay = () =>
 export default function AvailabilityPage() {
   const { user } = useAuth();
   const [blocks, setBlocks] = useState<Availability>([]);
+  const [preference, setPreference] = useState<StudyTimePreference>("none");
   const [newStart, setNewStart] = useState<Record<Day, string>>(emptyPerDay());
   const [newEnd, setNewEnd] = useState<Record<Day, string>>(emptyPerDay());
   const [addErrors, setAddErrors] = useState<Record<Day, string>>(emptyPerDay());
@@ -24,7 +25,12 @@ export default function AvailabilityPage() {
   const load = useCallback(async () => {
     if (!user) return;
     try {
-      setBlocks(await getAvailability(user.uid));
+      const [avail, pref] = await Promise.all([
+        getAvailability(user.uid),
+        getStudyTimePreference(user.uid),
+      ]);
+      setBlocks(avail);
+      setPreference(pref);
     } catch {
       setLoadError("Could not load availability. Please try refreshing.");
     }
@@ -78,6 +84,16 @@ export default function AvailabilityPage() {
   function deleteBlock(id: string) {
     const updated = blocks.filter((b) => b.id !== id);
     persistBlocks(updated);
+  }
+
+  async function handlePreferenceChange(pref: StudyTimePreference) {
+    if (!user) return;
+    setPreference(pref);
+    try {
+      await saveStudyTimePreference(user.uid, pref);
+    } catch {
+      setLoadError("Could not save preference. Please try again.");
+    }
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -152,6 +168,39 @@ export default function AvailabilityPage() {
       {loadError && (
         <p className="mb-4 text-sm text-red-500">{loadError}</p>
       )}
+
+      <div className="mb-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <label className="mb-2 block text-sm font-medium">
+          Preferred study time
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { value: "none" as const, label: "No preference" },
+              ...Object.entries(STUDY_TIME_RANGES).map(([value, { label }]) => ({
+                value: value as StudyTimePreference,
+                label,
+              })),
+            ] as { value: StudyTimePreference; label: string }[]
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handlePreferenceChange(opt.value)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                preference === opt.value
+                  ? "bg-blue-500 text-white"
+                  : "border border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          The scheduler will prioritize placing study blocks during your preferred hours.
+        </p>
+      </div>
 
       <div className="space-y-6">
         {DAYS_FROM_MONDAY.map((day) => {

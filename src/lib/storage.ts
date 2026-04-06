@@ -8,7 +8,8 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Assignment, Availability, AvailabilityBlock } from "./types";
+import { getDoc } from "firebase/firestore";
+import { Assignment, Availability, AvailabilityBlock, StudyTimePreference } from "./types";
 
 function getDb() {
   if (!db) throw new Error("Firestore not initialized");
@@ -33,6 +34,18 @@ export async function addAssignment(uid: string, assignment: Assignment) {
 
 export async function deleteAssignment(uid: string, id: string) {
   await deleteDoc(doc(getDb(), "users", uid, "assignments", id));
+}
+
+// --- Preferences ---
+
+export async function getStudyTimePreference(uid: string): Promise<StudyTimePreference> {
+  const snap = await getDoc(doc(getDb(), "users", uid, "preferences", "studyTime"));
+  if (!snap.exists()) return "none";
+  return (snap.data().value as StudyTimePreference) ?? "none";
+}
+
+export async function saveStudyTimePreference(uid: string, pref: StudyTimePreference) {
+  await setDoc(doc(getDb(), "users", uid, "preferences", "studyTime"), { value: pref });
 }
 
 // --- Availability ---
