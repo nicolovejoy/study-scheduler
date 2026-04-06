@@ -1,44 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Calendar, dayjsLocalizer } from "react-big-calendar";
 import dayjs from "dayjs";
-import { getAssignments, getAvailability, getStudyTimePreference } from "@/lib/storage";
 import { generateSchedule } from "@/lib/scheduler";
 import { useAuth } from "@/lib/auth";
-import { Assignment, ScheduleBlock } from "@/lib/types";
+import { useAssignments, useAvailability, useStudyTimePreference } from "@/lib/hooks";
 
 const localizer = dayjsLocalizer(dayjs);
 
 export default function SchedulePage() {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [blocks, setBlocks] = useState<ScheduleBlock[]>([]);
-  const [atRisk, setAtRisk] = useState<string[]>([]);
-  const [error, setError] = useState("");
+  const { assignments, error: assignErr } = useAssignments(user?.uid);
+  const { availability, error: availErr } = useAvailability(user?.uid);
+  const { preference } = useStudyTimePreference(user?.uid);
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    try {
-      const [a, availability, preference] = await Promise.all([
-        getAssignments(user.uid),
-        getAvailability(user.uid),
-        getStudyTimePreference(user.uid),
-      ]);
-      setAssignments(a);
-
-      const now = dayjs().startOf("week");
-      const result = generateSchedule(a, availability, now.toDate(), new Date(), preference);
-      setBlocks(result.blocks);
-      setAtRisk(result.atRisk);
-    } catch {
-      setError("Could not load schedule. Please try refreshing.");
+  const { blocks, atRisk } = useMemo(() => {
+    if (assignments.length === 0 || availability.length === 0) {
+      return { blocks: [], atRisk: [] as string[] };
     }
-  }, [user]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    const weekStart = dayjs().startOf("week");
+    return generateSchedule(assignments, availability, weekStart.toDate(), new Date(), preference);
+  }, [assignments, availability, preference]);
 
   const events = useMemo(
     () =>
@@ -51,6 +34,7 @@ export default function SchedulePage() {
     [blocks]
   );
 
+  const error = assignErr || availErr;
   const atRiskAssignments = assignments.filter((a) => atRisk.includes(a.id));
 
   return (

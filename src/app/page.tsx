@@ -1,42 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";
-import { Assignment } from "@/lib/types";
-import { getAssignments, deleteAssignment } from "@/lib/storage";
 import { useAuth } from "@/lib/auth";
+import { useAssignments, mutateDeleteAssignment } from "@/lib/hooks";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const { assignments: raw, error: loadError } = useAssignments(user?.uid);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    try {
-      const data = await getAssignments(user.uid);
-      setAssignments(
-        data.sort(
-          (a, b) =>
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        )
-      );
-    } catch {
-      setError("Could not load assignments. Please try refreshing.");
-    }
-  }, [user]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const assignments = useMemo(
+    () =>
+      [...raw].sort(
+        (a, b) =>
+          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      ),
+    [raw]
+  );
 
   async function handleDelete(id: string) {
     if (!user) return;
     if (!window.confirm("Delete this assignment? This cannot be undone.")) return;
     try {
-      await deleteAssignment(user.uid, id);
-      setAssignments((prev) => prev.filter((a) => a.id !== id));
+      await mutateDeleteAssignment(user.uid, id);
     } catch {
       setError("Could not delete assignment. Please try again.");
     }
@@ -68,8 +56,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {error && (
-        <p className="mb-4 text-sm text-red-500">{error}</p>
+      {(error || loadError) && (
+        <p className="mb-4 text-sm text-red-500">{error || loadError}</p>
       )}
 
       {assignments.length === 0 ? (
