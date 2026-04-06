@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, dayjsLocalizer } from "react-big-calendar";
 import dayjs from "dayjs";
-import { getAssignments, getAvailability } from "@/lib/storage";
+import { getAssignments, getAvailability, getStudyTimePreference } from "@/lib/storage";
 import { generateSchedule } from "@/lib/scheduler";
 import { useAuth } from "@/lib/auth";
 import { Assignment, ScheduleBlock } from "@/lib/types";
@@ -20,12 +20,15 @@ export default function SchedulePage() {
   const load = useCallback(async () => {
     if (!user) return;
     try {
-      const a = await getAssignments(user.uid);
+      const [a, availability, preference] = await Promise.all([
+        getAssignments(user.uid),
+        getAvailability(user.uid),
+        getStudyTimePreference(user.uid),
+      ]);
       setAssignments(a);
 
-      const availability = await getAvailability(user.uid);
       const now = dayjs().startOf("week");
-      const result = generateSchedule(a, availability, now.toDate());
+      const result = generateSchedule(a, availability, now.toDate(), new Date(), preference);
       setBlocks(result.blocks);
       setAtRisk(result.atRisk);
     } catch {

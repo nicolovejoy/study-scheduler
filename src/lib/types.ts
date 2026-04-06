@@ -35,6 +35,17 @@ export interface AvailabilityBlock {
 
 export type Availability = AvailabilityBlock[];
 
+export type StudyTimePreference = "morning" | "afternoon" | "evening" | "none";
+
+export const STUDY_TIME_RANGES: Record<
+  Exclude<StudyTimePreference, "none">,
+  { startHour: number; endHour: number; label: string }
+> = {
+  morning: { startHour: 6, endHour: 12, label: "Morning (6am\u201312pm)" },
+  afternoon: { startHour: 12, endHour: 18, label: "Afternoon (12pm\u20136pm)" },
+  evening: { startHour: 18, endHour: 24, label: "Evening (6pm\u201312am)" },
+};
+
 export const DAYS_FROM_SUNDAY: Day[] = [
   "sunday",
   "monday",

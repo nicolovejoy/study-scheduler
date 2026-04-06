@@ -1,5 +1,12 @@
 import dayjs from "dayjs";
-import { Assignment, Availability, DAYS_FROM_SUNDAY, ScheduleBlock } from "./types";
+import {
+  Assignment,
+  Availability,
+  DAYS_FROM_SUNDAY,
+  ScheduleBlock,
+  StudyTimePreference,
+  STUDY_TIME_RANGES,
+} from "./types";
 import { parseTime } from "./time";
 
 /**
@@ -11,7 +18,8 @@ export function generateSchedule(
   assignments: Assignment[],
   availability: Availability,
   weekStart: Date,
-  now: Date = new Date()
+  now: Date = new Date(),
+  preference: StudyTimePreference = "none"
 ): { blocks: ScheduleBlock[]; atRisk: string[] } {
   const sorted = [...assignments].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
@@ -51,6 +59,24 @@ export function generateSchedule(
   // Sort slots chronologically (blocks within a day are already ordered,
   // but multiple days need merging in order)
   slots.sort((a, b) => a.start.valueOf() - b.start.valueOf());
+
+  // If user has a time-of-day preference, sort preferred-hour slots first
+  // within each day while preserving day order
+  if (preference !== "none") {
+    const range = STUDY_TIME_RANGES[preference];
+    slots.sort((a, b) => {
+      // Keep day order stable
+      const dayDiff = a.start.startOf("day").valueOf() - b.start.startOf("day").valueOf();
+      if (dayDiff !== 0) return dayDiff;
+      // Within same day, preferred hours come first
+      const aInRange = a.start.hour() >= range.startHour && a.start.hour() < range.endHour;
+      const bInRange = b.start.hour() >= range.startHour && b.start.hour() < range.endHour;
+      if (aInRange && !bInRange) return -1;
+      if (!aInRange && bInRange) return 1;
+      // Both in or both out — keep chronological
+      return a.start.valueOf() - b.start.valueOf();
+    });
+  }
 
   const usedSlots = new Set<number>();
 
