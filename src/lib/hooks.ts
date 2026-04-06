@@ -7,6 +7,7 @@ import {
   getStudyTimePreference,
   addAssignment,
   deleteAssignment,
+  updateAssignment,
   saveAvailability,
   saveStudyTimePreference,
 } from "./storage";
@@ -40,6 +41,16 @@ export async function mutateDeleteAssignment(uid: string, id: string) {
     { revalidate: false }
   );
   await deleteAssignment(uid, id);
+}
+
+export async function mutateUpdateAssignment(uid: string, id: string, patch: Partial<Assignment>) {
+  await mutate(
+    `assignments/${uid}`,
+    (current: Assignment[] | undefined) =>
+      current?.map((a) => (a.id === id ? { ...a, ...patch } : a)) ?? [],
+    { revalidate: false }
+  );
+  await updateAssignment(uid, id, patch);
 }
 
 // --- Availability ---

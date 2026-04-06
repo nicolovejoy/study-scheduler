@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session startup
+
+At the start of every session, before doing any work:
+1. Run `git fetch origin && git status` to check for remote changes
+2. Run `git pull origin main` to pull the latest main
+3. Review recent commits with `git log --oneline -10` to understand what changed
+
+This keeps the working context in sync and avoids building on stale code.
+
 ## Project
 
 Study Scheduler — a Next.js app that helps college students estimate assignment time using AI and auto-schedule study blocks into their week.
@@ -17,33 +26,29 @@ Test watch: `npm run test:watch`
 
 ## Architecture
 
-- **Next.js 16 App Router** with TypeScript and Tailwind CSS
+- **Next.js App Router** with TypeScript and Tailwind CSS
 - **4 pages:** `/` (dashboard), `/add` (assignment form), `/availability` (weekly grid), `/schedule` (calendar view)
-- **AI estimation:** `/api/estimate` route uses Vercel AI SDK (`generateText` + `Output.object()`) with `@ai-sdk/anthropic` (claude-sonnet-4-6) to estimate assignment duration from pasted text
-- **Scheduling:** `src/lib/scheduler.ts` — greedy algorithm sorts assignments by due date and fills earliest available 30-minute slots. Skips slots that have already passed. Flags assignments as "at risk" when not enough time before due date
 - **Auth:** Firebase Auth with Google Sign-in (`src/lib/auth.tsx`). `AuthGate` component blocks unauthenticated access
-- **Storage:** Firestore with user-scoped subcollections (`users/{uid}/assignments`, `users/{uid}/availability`) via `src/lib/storage.ts`
-- **Calendar import:** `/api/parse-schedule` route uses AI to extract free study windows from a calendar screenshot (uploaded on `/availability` page)
-- **Calendar:** `react-big-calendar` with `dayjs` localizer on the `/schedule` page. Study blocks are blue, busy blocks are gray
+- **Storage:** Firestore with user-scoped subcollections (`users/{uid}/assignments`, `users/{uid}/availability`) via `src/lib/storage.ts`. All functions are async and take `uid` as first argument
+- **Data fetching:** SWR hooks in `src/lib/hooks.ts` (`useAssignments`, `useAvailability`, `useStudyTimePreference`). Mutations go through `mutateXxx` functions in the same file
+- **AI estimation:** `/api/estimate` route uses Vercel AI SDK (`generateText` + `Output.object()`) with `@ai-sdk/anthropic` (claude-sonnet-4-6)
+- **Scheduling:** `src/lib/scheduler.ts` — greedy algorithm fills 30-minute slots within availability blocks, sorted by due date. Flags assignments as "at risk" when not enough time remains
+- **Availability:** Stored as `AvailabilityBlock[]` — array of `{ id, day, start, end }` with 24h HH:MM strings
+- **Study time preference:** `StudyTimePreference` type (`"morning" | "afternoon" | "evening" | "none"`) stored per user in Firestore under `preferences/studyTime`
+- **Calendar:** `react-big-calendar` with `dayjs` localizer on `/schedule`. Study blocks are blue, busy blocks are gray
 
 ## Infrastructure as Code
 
-We manage infrastructure configuration (Firestore rules, etc.) as checked-in files rather than clicking through web consoles. This means settings live in the repo (e.g., `firestore.rules`, `firebase.json`), are reviewed in PRs like any other code change, and are deployed via CLI commands. If a new service needs configuration, define it in a file and deploy it from the terminal — don't configure it manually in a dashboard.
+We manage infrastructure configuration (Firestore rules, etc.) as checked-in files rather than clicking through web consoles. Settings live in the repo (`firestore.rules`, `firebase.json`), are reviewed in PRs, and deployed via CLI. Don't configure manually in dashboards.
 
 ## Key conventions
 
-- Client components use `"use client"` directive — all pages are client-rendered except the API route
-- The `Availability` type is `AvailabilityBlock[]` — each block has `day: Day`, `start` (24h HH:MM), and `end` (see `types.ts`)
+- Client components use `"use client"` directive — all pages are client-rendered except API routes
+- Always get the current user from `useAuth()` and pass `user.uid` to storage/hook functions
 - The `ANTHROPIC_API_KEY` env var must be set for the AI estimation route to work
 - Six `NEXT_PUBLIC_FIREBASE_*` env vars configure Firebase (set in Vercel, pulled locally with `vercel env pull`)
 
-## Next steps
+## Git workflow
 
-- Add assignment URL field and link from calendar blocks (#8, assigned to Max)
-- Add feedback loop: report actual time after completing an assignment (#5, assigned to Max)
-- Adopt shadcn/ui component library for accessible, composable UI
-- Add overlap detection for availability blocks on the same day
-
-## Out of scope (planned for later)
-
-Google Calendar sync (live API), sharing/groups, resource recommendations, preferences (strengths/weaknesses)
+- Never commit directly to `main` — always branch and open a PR
+- Branch naming: `feat/`, `fix/`, `chore/` prefixes

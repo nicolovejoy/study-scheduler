@@ -36,6 +36,10 @@ export async function deleteAssignment(uid: string, id: string) {
   await deleteDoc(doc(getDb(), "users", uid, "assignments", id));
 }
 
+export async function updateAssignment(uid: string, id: string, patch: Partial<Assignment>) {
+  await setDoc(doc(getDb(), "users", uid, "assignments", id), patch, { merge: true });
+}
+
 // --- Preferences ---
 
 export async function getStudyTimePreference(uid: string): Promise<StudyTimePreference> {
