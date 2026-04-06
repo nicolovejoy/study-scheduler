@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addAssignment } from "@/lib/storage";
 import { useAuth } from "@/lib/auth";
+import { mutateAddAssignment } from "@/lib/hooks";
 import DatePicker from "@/components/DatePicker";
 
 const ALLOWED_TYPES = new Set([
@@ -108,7 +108,7 @@ export default function AddAssignment() {
 
       const { estimatedMinutes, reasoning } = await res.json();
 
-      await addAssignment(user.uid, {
+      await mutateAddAssignment(user.uid, {
         id: crypto.randomUUID(),
         title,
         description: description.trim() || fileName || "Uploaded file",

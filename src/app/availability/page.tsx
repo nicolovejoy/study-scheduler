@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Availability, AvailabilityBlock, Day, StudyTimePreference } from "@/lib/types";
 import { DAYS_FROM_MONDAY, DAY_LABELS, STUDY_TIME_RANGES } from "@/lib/types";
-import { getAvailability, saveAvailability, getStudyTimePreference, saveStudyTimePreference } from "@/lib/storage";
 import { useAuth } from "@/lib/auth";
+import { useAvailability, useStudyTimePreference, mutateSaveAvailability, mutateSavePreference } from "@/lib/hooks";
 import { formatTime, toMinutes, sortAvailabilityBlocks } from "@/lib/time";
 
 const emptyPerDay = () =>
@@ -12,41 +12,22 @@ const emptyPerDay = () =>
 
 export default function AvailabilityPage() {
   const { user } = useAuth();
-  const [blocks, setBlocks] = useState<Availability>([]);
-  const [preference, setPreference] = useState<StudyTimePreference>("none");
+  const { availability: blocks, error: loadError } = useAvailability(user?.uid);
+  const { preference } = useStudyTimePreference(user?.uid);
   const [newStart, setNewStart] = useState<Record<Day, string>>(emptyPerDay());
   const [newEnd, setNewEnd] = useState<Record<Day, string>>(emptyPerDay());
   const [addErrors, setAddErrors] = useState<Record<Day, string>>(emptyPerDay());
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
-  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
+  async function persistBlocks(updated: AvailabilityBlock[]) {
     if (!user) return;
     try {
-      const [avail, pref] = await Promise.all([
-        getAvailability(user.uid),
-        getStudyTimePreference(user.uid),
-      ]);
-      setBlocks(avail);
-      setPreference(pref);
+      await mutateSaveAvailability(user.uid, updated);
     } catch {
-      setLoadError("Could not load availability. Please try refreshing.");
-    }
-  }, [user]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  async function persistBlocks(updated: Availability) {
-    if (!user) return;
-    setBlocks(updated);
-    try {
-      await saveAvailability(user.uid, updated);
-    } catch {
-      setLoadError("Could not save changes. Please try again.");
+      setSaveError("Could not save changes. Please try again.");
     }
   }
 
@@ -88,11 +69,10 @@ export default function AvailabilityPage() {
 
   async function handlePreferenceChange(pref: StudyTimePreference) {
     if (!user) return;
-    setPreference(pref);
     try {
-      await saveStudyTimePreference(user.uid, pref);
+      await mutateSavePreference(user.uid, pref);
     } catch {
-      setLoadError("Could not save preference. Please try again.");
+      setSaveError("Could not save preference. Please try again.");
     }
   }
 
@@ -165,8 +145,8 @@ export default function AvailabilityPage() {
         </div>
       </div>
 
-      {loadError && (
-        <p className="mb-4 text-sm text-red-500">{loadError}</p>
+      {(loadError || saveError) && (
+        <p className="mb-4 text-sm text-red-500">{loadError || saveError}</p>
       )}
 
       <div className="mb-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
