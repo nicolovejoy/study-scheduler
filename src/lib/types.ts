@@ -6,6 +6,7 @@ export interface Assignment {
   estimatedMinutes: number;
   reasoning: string;
   createdAt: string;
+  url?: string;
   actualMinutes?: number;
   completedAt?: string; // ISO date string
 }

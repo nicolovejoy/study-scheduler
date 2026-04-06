@@ -24,6 +24,7 @@ export default function AddAssignment() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -124,6 +125,7 @@ export default function AddAssignment() {
       await mutateAddAssignment(user.uid, {
         id: crypto.randomUUID(),
         title,
+        url: url.trim() || undefined,
         description: description.trim() || fileName || "Uploaded file",
         dueDate,
         estimatedMinutes,
@@ -151,6 +153,19 @@ export default function AddAssignment() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Ochem Problem Set 5"
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Assignment URL{" "}
+            <span className="font-normal text-zinc-500">(optional)</span>
+          </label>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://canvas.instructure.com/..."
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
         </div>
